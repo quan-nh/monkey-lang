@@ -2,11 +2,15 @@ package org.example.token;
 
 import java.util.HashMap;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Token {
     public static final String ILLEGAL = "ILLEGAL";
     public static final String EOF = "EOF";
@@ -42,14 +46,6 @@ public class Token {
 
     private String type;
     private String literal;
-
-    public Token() {
-    }
-
-    public Token(String type, String literal) {
-        this.type = type;
-        this.literal = literal;
-    }
 
     public Token(String type, char ch) {
         this.type = type;
