@@ -3,7 +3,7 @@ package org.example.lexer;
 import org.example.token.Token;
 
 public class Lexer {
-    private String input;
+    private final String input;
     private int position; // current char
     private int readPosition; // next char
     private char ch;
@@ -23,40 +23,54 @@ public class Lexer {
         this.readPosition++;
     }
 
+    private char peekChar() {
+        if (this.readPosition >= this.input.length()) {
+            return 0;
+        } else {
+            return this.input.charAt(this.readPosition);
+        }
+    }
+
     public Token nextToken() {
         Token tok = null;
 
         skipWhitespace();
 
         switch (this.ch) {
-            case '=':
-                tok = new Token(Token.ASSIGN, this.ch);
-                break;
-            case ';':
-                tok = new Token(Token.SEMICOLON, this.ch);
-                break;
-            case '(':
-                tok = new Token(Token.LPAREN, this.ch);
-                break;
-            case ')':
-                tok = new Token(Token.RPAREN, this.ch);
-                break;
-            case ',':
-                tok = new Token(Token.COMMA, this.ch);
-                break;
-            case '+':
-                tok = new Token(Token.PLUS, this.ch);
-                break;
-            case '{':
-                tok = new Token(Token.LBRACE, this.ch);
-                break;
-            case '}':
-                tok = new Token(Token.RBRACE, this.ch);
-                break;
-            case 0:
-                tok = new Token(Token.EOF, "");
-                break;
-            default:
+            case '=' -> {
+                if (peekChar() == '=') {
+                    var ch = this.ch;
+                    readChar();
+                    var literal = String.valueOf(ch) + this.ch;
+                    tok = new Token(Token.EQ, literal);
+                } else {
+                    tok = new Token(Token.ASSIGN, this.ch);
+                }
+            }
+            case '+' -> tok = new Token(Token.PLUS, this.ch);
+            case '-' -> tok = new Token(Token.MINUS, this.ch);
+            case '!' -> {
+                if (peekChar() == '=') {
+                    var ch = this.ch;
+                    readChar();
+                    var literal = String.valueOf(ch) + this.ch;
+                    tok = new Token(Token.NOT_EQ, literal);
+                } else {
+                    tok = new Token(Token.BANG, this.ch);
+                }
+            }
+            case '/' -> tok = new Token(Token.SLASH, this.ch);
+            case '*' -> tok = new Token(Token.ASTERISK, this.ch);
+            case '<' -> tok = new Token(Token.LT, this.ch);
+            case '>' -> tok = new Token(Token.GT, this.ch);
+            case ';' -> tok = new Token(Token.SEMICOLON, this.ch);
+            case '(' -> tok = new Token(Token.LPAREN, this.ch);
+            case ')' -> tok = new Token(Token.RPAREN, this.ch);
+            case ',' -> tok = new Token(Token.COMMA, this.ch);
+            case '{' -> tok = new Token(Token.LBRACE, this.ch);
+            case '}' -> tok = new Token(Token.RBRACE, this.ch);
+            case 0 -> tok = new Token(Token.EOF, "");
+            default -> {
                 if (isLetter(this.ch)) {
                     String ident = readIdentifier();
                     return new Token((Token.lookupIdent(ident)), ident);
@@ -65,7 +79,7 @@ public class Lexer {
                 } else {
                     tok = new Token(Token.ILLEGAL, this.ch);
                 }
-                break;
+            }
         }
 
         readChar();
