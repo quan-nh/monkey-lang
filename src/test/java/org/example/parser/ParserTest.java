@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Arrays;
 import java.util.List;
 import org.example.ast.LetStatement;
+import org.example.ast.ReturnStatement;
 import org.example.ast.Statement;
 import org.example.lexer.Lexer;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,25 @@ class ParserTest {
         for (int i = 0; i < expectedIdentifier.size(); i++) {
             var stmt = program.getStatements().get(i);
             testLetStatement(stmt, expectedIdentifier.get(i));
+        }
+    }
+
+    @Test
+    void testReturnStatements() {
+        var input = """
+                return 5;
+                return 10;
+                return 993322;""";
+        var l = new Lexer(input);
+        var p = new Parser(l);
+
+        var program = p.parseProgram();
+        checkParseErrors(p);
+        assertEquals(3, program.getStatements().size(), "program.Statements does not contain 3 statements.");
+
+        for (var stmt:program.getStatements()) {
+            var returnStmt = (ReturnStatement) stmt;
+            assertEquals("return", returnStmt.tokenLiteral());
         }
     }
 

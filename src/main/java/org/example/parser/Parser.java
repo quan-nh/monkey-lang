@@ -6,6 +6,7 @@ import java.util.Objects;
 import org.example.ast.Identifier;
 import org.example.ast.LetStatement;
 import org.example.ast.Program;
+import org.example.ast.ReturnStatement;
 import org.example.ast.Statement;
 import org.example.lexer.Lexer;
 import org.example.token.Token;
@@ -49,6 +50,7 @@ public class Parser {
     private Statement parseStatement() {
         return switch (this.curToken.getType()) {
             case Token.LET -> parseLetStatement();
+            case Token.RETURN -> parseReturnStatement();
             default -> null;
 
         };
@@ -73,6 +75,19 @@ public class Parser {
         }
 
         return stmt;
+    }
+
+    private Statement parseReturnStatement() {
+       var stmt = new ReturnStatement();
+       stmt.setToken(this.curToken);
+
+       nextToken();
+
+        while (!curTokenIs(Token.SEMICOLON)) {
+            nextToken();
+        }
+
+       return stmt;
     }
 
     private boolean curTokenIs(String tokenType) {
