@@ -1,6 +1,7 @@
 package org.example.parser;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import org.example.ast.Identifier;
 import org.example.ast.LetStatement;
@@ -13,9 +14,11 @@ public class Parser {
     private Lexer l;
     private Token curToken;
     private Token peekToken;
+    private List<String> errors;
 
     public Parser(Lexer l) {
         this.l = l;
+        this.errors = new ArrayList<>();
 
         // Read two tokens, so curToken and peekToken are both set
         nextToken();
@@ -77,7 +80,7 @@ public class Parser {
     }
 
     private boolean peekTokenIs(String tokenType) {
-        return Objects.equals(peekToken.getType(), tokenType);
+        return Objects.equals(this.peekToken.getType(), tokenType);
     }
 
     private boolean expectPeek(String tokenType) {
@@ -85,7 +88,16 @@ public class Parser {
             nextToken();
             return true;
         } else {
+            peekError(tokenType);
             return false;
         }
+    }
+
+    public List<String> getErrors() {
+        return errors;
+    }
+
+    private void peekError(String tokenType) {
+        this.errors.add("expected next token to be " + tokenType + ", got " + this.peekToken.getType() + " instead");
     }
 }
