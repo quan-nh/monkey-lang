@@ -17,4 +17,13 @@ public class Program implements Node {
             return "";
         }
     }
+
+    @Override
+    public String toString() {
+        var out = new StringBuilder();
+        for (var s : this.statements) {
+            out.append(s.toString());
+        }
+        return out.toString();
+    }
 }

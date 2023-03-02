@@ -11,12 +11,16 @@ import org.example.token.Token;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Identifier implements Expression {
-
     private Token token;
     private String value;
 
     @Override
     public String tokenLiteral() {
         return token.getLiteral();
+    }
+
+    @Override
+    public String toString() {
+        return value;
     }
 }
