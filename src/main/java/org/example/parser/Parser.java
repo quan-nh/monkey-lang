@@ -1,8 +1,14 @@
 package org.example.parser;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
+import org.example.ast.Expression;
+import org.example.ast.ExpressionStatement;
 import org.example.ast.Identifier;
 import org.example.ast.LetStatement;
 import org.example.ast.Program;
@@ -12,14 +18,32 @@ import org.example.lexer.Lexer;
 import org.example.token.Token;
 
 public class Parser {
+    private enum Precedence {
+        LOWEST,
+        EQUALS,// ==
+        LESSGREATER,// > or <
+        SUM,// +
+        PRODUCT, // *
+        PREFIX, // -X or !X
+        CALL, // myFunction(X)
+    }
+
     private Lexer l;
+    private List<String> errors;
+
     private Token curToken;
     private Token peekToken;
-    private List<String> errors;
+
+    private Map<String, Supplier<Expression>> prefixParseFns;
+    private Map<String, UnaryOperator<Expression>> infixParseFns;
 
     public Parser(Lexer l) {
         this.l = l;
         this.errors = new ArrayList<>();
+        this.prefixParseFns = new HashMap<>();
+
+        Supplier<Expression> parseIdentifier = () -> new Identifier(this.curToken, this.curToken.getLiteral());
+        registerPrefix(Token.IDENT, parseIdentifier);
 
         // Read two tokens, so curToken and peekToken are both set
         nextToken();
@@ -35,7 +59,7 @@ public class Parser {
         var program = new Program();
         var statements = new ArrayList<Statement>();
 
-        while (this.curToken.getType() != Token.EOF) {
+        while (!Objects.equals(this.curToken.getType(), Token.EOF)) {
             var stmt = parseStatement();
             if (stmt != null) {
                 statements.add(stmt);
@@ -51,8 +75,7 @@ public class Parser {
         return switch (this.curToken.getType()) {
             case Token.LET -> parseLetStatement();
             case Token.RETURN -> parseReturnStatement();
-            default -> null;
-
+            default -> parseExpressionStatement();
         };
     }
 
@@ -78,16 +101,38 @@ public class Parser {
     }
 
     private Statement parseReturnStatement() {
-       var stmt = new ReturnStatement();
-       stmt.setToken(this.curToken);
+        var stmt = new ReturnStatement();
+        stmt.setToken(this.curToken);
 
-       nextToken();
+        nextToken();
 
         while (!curTokenIs(Token.SEMICOLON)) {
             nextToken();
         }
 
-       return stmt;
+        return stmt;
+    }
+
+    private ExpressionStatement parseExpressionStatement() {
+        var stmt = new ExpressionStatement();
+        stmt.setToken(this.curToken);
+        stmt.setExpression(parseExpression(Precedence.LOWEST));
+
+        while (peekTokenIs(Token.SEMICOLON)) {
+            nextToken();
+        }
+
+        return stmt;
+    }
+
+    private Expression parseExpression(Precedence precedence) {
+       var prefix = this.prefixParseFns.get(this.curToken.getType());
+       if (prefix == null) {
+           return null;
+       }
+       var leftExp  = prefix.get();
+
+       return leftExp;
     }
 
     private boolean curTokenIs(String tokenType) {
@@ -114,5 +159,13 @@ public class Parser {
 
     private void peekError(String tokenType) {
         this.errors.add("expected next token to be " + tokenType + ", got " + this.peekToken.getType() + " instead");
+    }
+
+    private void registerPrefix(String tokenType, Supplier<Expression> prefixParseFn) {
+        this.prefixParseFns.put(tokenType, prefixParseFn);
+    }
+
+    private void registerInfix(String tokenType, UnaryOperator<Expression> infixParseFn) {
+        this.infixParseFns.put(tokenType, infixParseFn);
     }
 }

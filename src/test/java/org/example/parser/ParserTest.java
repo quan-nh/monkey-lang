@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.List;
+import org.example.ast.ExpressionStatement;
+import org.example.ast.Identifier;
 import org.example.ast.LetStatement;
 import org.example.ast.ReturnStatement;
 import org.example.ast.Statement;
@@ -41,15 +43,35 @@ class ParserTest {
                 return 993322;""";
         var l = new Lexer(input);
         var p = new Parser(l);
-
         var program = p.parseProgram();
         checkParseErrors(p);
+
         assertEquals(3, program.getStatements().size(), "program.Statements does not contain 3 statements.");
 
         for (var stmt:program.getStatements()) {
             var returnStmt = (ReturnStatement) stmt;
             assertEquals("return", returnStmt.tokenLiteral());
         }
+    }
+
+    @Test
+    void testIdentifierExpression() {
+        var input = "foobar;";
+        var l = new Lexer(input);
+        var p = new Parser(l);
+        var program = p.parseProgram();
+        checkParseErrors(p);
+
+        assertEquals(1, program.getStatements().size(), "program has not enough statements.");
+
+        assertTrue(program.getStatements().get(0) instanceof ExpressionStatement);
+        var stmt = (ExpressionStatement) program.getStatements().get(0);
+
+        assertTrue(stmt.getExpression() instanceof Identifier);
+        var ident = (Identifier) stmt.getExpression();
+
+        assertEquals("foobar", ident.getValue());
+        assertEquals("foobar", ident.tokenLiteral());
     }
 
     private void checkParseErrors(Parser p) {
