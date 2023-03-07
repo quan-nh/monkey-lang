@@ -10,6 +10,7 @@ import java.util.function.UnaryOperator;
 import org.example.ast.Expression;
 import org.example.ast.ExpressionStatement;
 import org.example.ast.Identifier;
+import org.example.ast.IntegerLiteral;
 import org.example.ast.LetStatement;
 import org.example.ast.Program;
 import org.example.ast.ReturnStatement;
@@ -36,14 +37,27 @@ public class Parser {
 
     private Map<String, Supplier<Expression>> prefixParseFns;
     private Map<String, UnaryOperator<Expression>> infixParseFns;
+    private Supplier<Expression> parseIdentifier = () -> new Identifier(this.curToken, this.curToken.getLiteral());
+    private Supplier<Expression> parseIntegerLiteral = () -> {
+        var lit = new IntegerLiteral();
+        lit.setToken(this.curToken);
+
+        try {
+            var value = Long.parseLong(this.curToken.getLiteral());
+            lit.setValue(value);
+        } catch (Exception ex) {
+            this.errors.add("could not parse " + this.curToken.getLiteral() + " as integer");
+            return null;
+        }
+        return lit;
+    };
 
     public Parser(Lexer l) {
         this.l = l;
         this.errors = new ArrayList<>();
         this.prefixParseFns = new HashMap<>();
-
-        Supplier<Expression> parseIdentifier = () -> new Identifier(this.curToken, this.curToken.getLiteral());
         registerPrefix(Token.IDENT, parseIdentifier);
+        registerPrefix(Token.INT, parseIntegerLiteral);
 
         // Read two tokens, so curToken and peekToken are both set
         nextToken();
@@ -126,13 +140,13 @@ public class Parser {
     }
 
     private Expression parseExpression(Precedence precedence) {
-       var prefix = this.prefixParseFns.get(this.curToken.getType());
-       if (prefix == null) {
-           return null;
-       }
-       var leftExp  = prefix.get();
+        var prefix = this.prefixParseFns.get(this.curToken.getType());
+        if (prefix == null) {
+            return null;
+        }
+        var leftExp = prefix.get();
 
-       return leftExp;
+        return leftExp;
     }
 
     private boolean curTokenIs(String tokenType) {

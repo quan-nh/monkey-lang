@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.example.ast.ExpressionStatement;
 import org.example.ast.Identifier;
+import org.example.ast.IntegerLiteral;
 import org.example.ast.LetStatement;
 import org.example.ast.ReturnStatement;
 import org.example.ast.Statement;
@@ -72,6 +73,26 @@ class ParserTest {
 
         assertEquals("foobar", ident.getValue());
         assertEquals("foobar", ident.tokenLiteral());
+    }
+
+    @Test
+    void testIntegerLiteralExpression() {
+        var input = "5;";
+        var l = new Lexer(input);
+        var p = new Parser(l);
+        var program = p.parseProgram();
+        checkParseErrors(p);
+
+        assertEquals(1, program.getStatements().size(), "program has not enough statements.");
+
+        assertTrue(program.getStatements().get(0) instanceof ExpressionStatement);
+        var stmt = (ExpressionStatement) program.getStatements().get(0);
+
+        assertTrue(stmt.getExpression() instanceof IntegerLiteral, "exp not IntegerLiteral");
+        var literal = (IntegerLiteral) stmt.getExpression();
+
+        assertEquals(5, literal.getValue());
+        assertEquals("5", literal.tokenLiteral());
     }
 
     private void checkParseErrors(Parser p) {
