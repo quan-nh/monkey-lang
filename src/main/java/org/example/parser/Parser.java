@@ -12,6 +12,7 @@ import org.example.ast.ExpressionStatement;
 import org.example.ast.Identifier;
 import org.example.ast.IntegerLiteral;
 import org.example.ast.LetStatement;
+import org.example.ast.PrefixExpression;
 import org.example.ast.Program;
 import org.example.ast.ReturnStatement;
 import org.example.ast.Statement;
@@ -38,6 +39,7 @@ public class Parser {
     private Map<String, Supplier<Expression>> prefixParseFns;
     private Map<String, UnaryOperator<Expression>> infixParseFns;
     private Supplier<Expression> parseIdentifier = () -> new Identifier(this.curToken, this.curToken.getLiteral());
+
     private Supplier<Expression> parseIntegerLiteral = () -> {
         var lit = new IntegerLiteral();
         lit.setToken(this.curToken);
@@ -52,12 +54,26 @@ public class Parser {
         return lit;
     };
 
+    private Supplier<Expression> parsePrefixExpression = () -> {
+        var exp = new PrefixExpression();
+        exp.setToken(this.curToken);
+        exp.setOperator(this.curToken.getLiteral());
+
+        nextToken();
+
+        exp.setRight(parseExpression(Precedence.PREFIX));
+
+        return exp;
+    };
+
     public Parser(Lexer l) {
         this.l = l;
         this.errors = new ArrayList<>();
         this.prefixParseFns = new HashMap<>();
         registerPrefix(Token.IDENT, parseIdentifier);
         registerPrefix(Token.INT, parseIntegerLiteral);
+        registerPrefix(Token.BANG, parsePrefixExpression);
+        registerPrefix(Token.MINUS, parsePrefixExpression);
 
         // Read two tokens, so curToken and peekToken are both set
         nextToken();
@@ -142,11 +158,16 @@ public class Parser {
     private Expression parseExpression(Precedence precedence) {
         var prefix = this.prefixParseFns.get(this.curToken.getType());
         if (prefix == null) {
+            noPrefixParseFnError(this.curToken.getType());
             return null;
         }
         var leftExp = prefix.get();
 
         return leftExp;
+    }
+
+    private void noPrefixParseFnError(String type) {
+        this.errors.add("no prefix parse function for " + type + " found");
     }
 
     private boolean curTokenIs(String tokenType) {
