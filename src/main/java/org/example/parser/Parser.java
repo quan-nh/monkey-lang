@@ -10,6 +10,7 @@ import java.util.function.UnaryOperator;
 import org.example.ast.Expression;
 import org.example.ast.ExpressionStatement;
 import org.example.ast.Identifier;
+import org.example.ast.InfixExpression;
 import org.example.ast.IntegerLiteral;
 import org.example.ast.LetStatement;
 import org.example.ast.PrefixExpression;
@@ -30,6 +31,8 @@ public class Parser {
         CALL, // myFunction(X)
     }
 
+    private Map<String, Precedence> precedences;
+
     private Lexer l;
     private List<String> errors;
 
@@ -38,42 +41,36 @@ public class Parser {
 
     private Map<String, Supplier<Expression>> prefixParseFns;
     private Map<String, UnaryOperator<Expression>> infixParseFns;
-    private Supplier<Expression> parseIdentifier = () -> new Identifier(this.curToken, this.curToken.getLiteral());
-
-    private Supplier<Expression> parseIntegerLiteral = () -> {
-        var lit = new IntegerLiteral();
-        lit.setToken(this.curToken);
-
-        try {
-            var value = Long.parseLong(this.curToken.getLiteral());
-            lit.setValue(value);
-        } catch (Exception ex) {
-            this.errors.add("could not parse " + this.curToken.getLiteral() + " as integer");
-            return null;
-        }
-        return lit;
-    };
-
-    private Supplier<Expression> parsePrefixExpression = () -> {
-        var exp = new PrefixExpression();
-        exp.setToken(this.curToken);
-        exp.setOperator(this.curToken.getLiteral());
-
-        nextToken();
-
-        exp.setRight(parseExpression(Precedence.PREFIX));
-
-        return exp;
-    };
 
     public Parser(Lexer l) {
         this.l = l;
         this.errors = new ArrayList<>();
+
         this.prefixParseFns = new HashMap<>();
         registerPrefix(Token.IDENT, parseIdentifier);
         registerPrefix(Token.INT, parseIntegerLiteral);
         registerPrefix(Token.BANG, parsePrefixExpression);
         registerPrefix(Token.MINUS, parsePrefixExpression);
+
+        this.infixParseFns = new HashMap<>();
+        registerInfix(Token.PLUS, parseInfixExpression);
+        registerInfix(Token.MINUS, parseInfixExpression);
+        registerInfix(Token.SLASH, parseInfixExpression);
+        registerInfix(Token.ASTERISK, parseInfixExpression);
+        registerInfix(Token.EQ, parseInfixExpression);
+        registerInfix(Token.NOT_EQ, parseInfixExpression);
+        registerInfix(Token.LT, parseInfixExpression);
+        registerInfix(Token.GT, parseInfixExpression);
+
+        precedences = new HashMap<>();
+        precedences.put(Token.EQ, Precedence.EQUALS);
+        precedences.put(Token.NOT_EQ, Precedence.EQUALS);
+        precedences.put(Token.LT, Precedence.LESSGREATER);
+        precedences.put(Token.GT, Precedence.LESSGREATER);
+        precedences.put(Token.PLUS, Precedence.SUM);
+        precedences.put(Token.MINUS, Precedence.SUM);
+        precedences.put(Token.SLASH, Precedence.PRODUCT);
+        precedences.put(Token.ASTERISK, Precedence.PRODUCT);
 
         // Read two tokens, so curToken and peekToken are both set
         nextToken();
@@ -163,6 +160,17 @@ public class Parser {
         }
         var leftExp = prefix.get();
 
+        while (!peekTokenIs(Token.SEMICOLON) && precedence.compareTo(peekPrecedence()) < 0) {
+            var infix = infixParseFns.get(this.peekToken.getType());
+            if (infix == null) {
+                return leftExp;
+            }
+
+            nextToken();
+
+            leftExp = infix.apply(leftExp);
+        }
+
         return leftExp;
     }
 
@@ -202,5 +210,62 @@ public class Parser {
 
     private void registerInfix(String tokenType, UnaryOperator<Expression> infixParseFn) {
         this.infixParseFns.put(tokenType, infixParseFn);
+    }
+
+    private Supplier<Expression> parseIdentifier = () -> new Identifier(this.curToken, this.curToken.getLiteral());
+
+    private Supplier<Expression> parseIntegerLiteral = () -> {
+        var lit = new IntegerLiteral();
+        lit.setToken(this.curToken);
+
+        try {
+            var value = Long.parseLong(this.curToken.getLiteral());
+            lit.setValue(value);
+        } catch (Exception ex) {
+            this.errors.add("could not parse " + this.curToken.getLiteral() + " as integer");
+            return null;
+        }
+        return lit;
+    };
+
+    private Supplier<Expression> parsePrefixExpression = () -> {
+        var exp = new PrefixExpression();
+        exp.setToken(this.curToken);
+        exp.setOperator(this.curToken.getLiteral());
+
+        nextToken();
+
+        exp.setRight(parseExpression(Precedence.PREFIX));
+
+        return exp;
+    };
+
+    private UnaryOperator<Expression> parseInfixExpression = left -> {
+        var expression = new InfixExpression();
+        expression.setToken(this.curToken);
+        expression.setOperator(this.curToken.getLiteral());
+        expression.setLeft(left);
+
+        var precedence = curPrecedence();
+        nextToken();
+        expression.setRight(parseExpression(precedence));
+
+        return expression;
+    };
+
+    private Precedence peekPrecedence() {
+        var type = this.peekToken.getType();
+        if (precedences.containsKey(type)) {
+            return precedences.get(type);
+        }
+        return Precedence.LOWEST;
+    }
+
+    private Precedence curPrecedence() {
+        var type = this.curToken.getType();
+        if (precedences.containsKey(type)) {
+            return precedences.get(type);
+        }
+        return Precedence.LOWEST;
     }
 }

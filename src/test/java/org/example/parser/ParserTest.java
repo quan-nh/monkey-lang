@@ -10,6 +10,7 @@ import java.util.List;
 import org.example.ast.Expression;
 import org.example.ast.ExpressionStatement;
 import org.example.ast.Identifier;
+import org.example.ast.InfixExpression;
 import org.example.ast.IntegerLiteral;
 import org.example.ast.LetStatement;
 import org.example.ast.PrefixExpression;
@@ -113,6 +114,27 @@ class ParserTest {
         var exp = (PrefixExpression) stmt.getExpression();
 
         assertEquals("!", exp.getOperator());
+        testIntegerLiteral(exp.getRight(), 5);
+    }
+
+    @Test
+    void testParsingInfixExpression() {
+        var input = "5 + 5;";
+        var l = new Lexer(input);
+        var p = new Parser(l);
+        var program = p.parseProgram();
+        checkParseErrors(p);
+
+        assertEquals(1, program.getStatements().size(), "program has not enough statements.");
+
+        assertTrue(program.getStatements().get(0) instanceof ExpressionStatement);
+        var stmt = (ExpressionStatement) program.getStatements().get(0);
+
+        assertTrue(stmt.getExpression() instanceof InfixExpression, "exp not InfixExpression.");
+        var exp = (InfixExpression) stmt.getExpression();
+
+        testIntegerLiteral(exp.getLeft(), 5);
+        assertEquals("+", exp.getOperator());
         testIntegerLiteral(exp.getRight(), 5);
     }
 
