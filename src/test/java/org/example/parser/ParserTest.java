@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import org.example.ast.Expression;
 import org.example.ast.ExpressionStatement;
@@ -136,6 +137,32 @@ class ParserTest {
         testIntegerLiteral(exp.getLeft(), 5);
         assertEquals("+", exp.getOperator());
         testIntegerLiteral(exp.getRight(), 5);
+    }
+
+    @Test
+    void testOperatorPrecedenceParsing() {
+        var tests = new HashMap<String, String>();
+        tests.put("-a * b", "((-a) * b)");
+        tests.put("!-a", "(!(-a))");
+        tests.put("a + b + c", "((a + b) + c)");
+        tests.put("a + b - c", "((a + b) - c)");
+        tests.put("a * b * c", "((a * b) * c)");
+        tests.put("a * b / c", "((a * b) / c)");
+        tests.put("a + b / c", "(a + (b / c))");
+        tests.put("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)");
+        tests.put("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)");
+        tests.put("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))");
+        tests.put("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))");
+        tests.put("3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))");
+
+        for (var k : tests.keySet()) {
+            var l = new Lexer(k);
+            var p = new Parser(l);
+            var program = p.parseProgram();
+            checkParseErrors(p);
+
+            assertEquals(tests.get(k), program.toString());
+        }
     }
 
     private void testIntegerLiteral(Expression exp, long value) {
